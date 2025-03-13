@@ -1,81 +1,91 @@
+[Русская версия](./README.ru.md)
+
 # CDR Archiver
 
-## Описание
-**CDR Archiver** — Скрипт для автоматического архивирования большого количества файлов CDR (Call Detail Records). Скрипт группирует файлы по месяцам и упаковыкт в архивы. После успешного архивирования исходные файлы удаляются.
+**CDR Archiver** is a Bash script designed to automate the archiving of CDR (Call Detail Records) files. It groups files by month, compresses them into archives, and deletes the original files after successful archiving. Logs of all actions are saved in the `archive_log.txt` file. The script supports flexible configuration via command-line parameters, including specifying the source directory, archive directory, and file name pattern. It is ideal for handling large volumes of data in telecommunications systems.
 
-**Это личный проект, созданный для решения конкретной задачи.** Если у вас есть идеи по улучшению, вы можете создать Issue или отправить Pull Request. Все предложения приветствуются!
+This is a **personal project** created to solve a specific task. 
 
-## Что умеет скрипт?
-1. **Группирует файлы по месяцам**:
-   - Скрипт анализирует имена файлов (например, `cdr_20051001_123456_ROOT.csv`) и определяет, к какому месяцу они относятся.
+## Features
+1. **Groups files by month**:
+   - The script analyzes file names (e.g., `cdr_20051001_123456_ROOT.csv`) and determines which month they belong to.
 
-2. **Создает архивы**:
-   - Файлы, относящиеся к одному месяцу, упаковываются в архив с именем в формате `имя_папки_ГОД_МЕСЯЦ.tar.gz`. Например, если папка с файлами называется `call_logs`, то архив будет называться `call_logs_2005_10.tar.gz`.
+2. **Creates archives**:
+   - Files from the same month are packed into an archive named in the format `folder_name_YEAR_MONTH.tar.gz`. For example, if the source folder is named `call_logs`, the archive will be named `call_logs_2005_10.tar.gz`.
 
-3. **Удаляет исходные файлы**:
-   - После успешного архивирования исходные файлы удаляются, чтобы не занимать лишнее место.
+3. **Deletes original files**:
+   - After successful archiving, the original files are deleted to free up space.
 
-4. **Логирует действия**:
-   - Логирование ведется в файл `archive_log.txt`, который создается в папке с архивами.
+4. **Logs actions**:
+   - All actions are logged in the `archive_log.txt` file, which is created in the archive directory.
 
-5. **Проверяет свободное место**:
-   - Перед архивированием скрипт проверяет, достаточно ли места на диске.
+5. **Checks free disk space**:
+   - Before archiving, the script checks if there is enough disk space.
 
+## System Requirements
+- **Operating System**: Linux.
+- **Utilities**: `bash`, `tar`, `find`, `awk`, `du`, `df`.
 
-## Системные требования
-- **Операционная система**: Linux.
-- **Утилиты**: `bash`, `tar`, `find`, `awk`, `du`, `df`.
-
-## Как установить?
-1. Склонируйте репозиторий:
+## Installation
+1. Clone the repository:
 ```bash
 git clone https://github.com/SkyrocketStan/cdr-archiver.git
 cd cdr-archiver
 ```
 
-2. Сделайте скрипт исполняемым:
+2. Make the script executable:
 ```bash
 chmod +x cdr_archiver.sh
 ```
 
-## Как использовать?
+## Usage
 
-### 1. С использованием параметров
+### 1. Using named parameters
 ```bash
 ./cdr_archiver.sh --source-dir /path/to/source --archive-dir /path/to/archives --pattern "cdr_*_*.csv"
 ```
 
-### 2. Без использования параметров
+### 2. Using positional arguments
 ```bash
 ./cdr_archiver.sh /path/to/source /path/to/archives "cdr_*_*.csv"
 ```
 
-### 3. Справка
+### 3. Help
 ```bash
 ./cdr_archiver.sh --help
 ```
 
-## Параметры
-| Параметр          | Описание                                                                 |
+## Parameters
+| Parameter          | Description                                                                 |
 |-------------------|-------------------------------------------------------------------------|
-| `--source-dir`    | Папка, где лежат исходные файлы CDR.                                    |
-| `--archive-dir`   | Папка, куда будут сохраняться архивы.                                   |
-| `--pattern`       | Шаблон для поиска файлов (по умолчанию: `cdr_*_*.csv`).                |
-| `--help`          | Показывает справку по использованию скрипта.                            |
+| `--source-dir`    | Directory containing the source CDR files.                              |
+| `--archive-dir`   | Directory where archives will be saved.                                 |
+| `--pattern`       | File name pattern (default: `cdr_*_*.csv`).                            |
+| `--help`          | Displays help information.                                              |
 
-
-## Логирование
-Скрипт создает файл `archive_log.txt` в папке с архивами. Пример лога:
+## Logging
+The script creates a log file `archive_log.txt` in the archive directory. Example log:
 ```
-2005-10-25 12:34:56 - Успешно: создан архив call_logs_2005_10.tar.gz с 150 файлами.
-2005-10-25 12:34:57 - Ошибка: не удалось создать архив call_logs_2005_09.tar.gz.
-2005-10-25 12:35:00 - Скрипт завершен.
+2005-10-25 12:34:56 - Success: Created archive call_logs_2005_10.tar.gz with 150 files.
+2005-10-25 12:34:57 - Error: Failed to create archive call_logs_2005_09.tar.gz.
+2005-10-25 12:35:00 - Script completed.
 ```
 
-## Как это работает?
-- **Групповое архивирование**: Файлы группируются по месяцам и архивируются одной командой.
-- **Параллельная обработка**: Если файлов много, можно архивировать данные для разных месяцев одновременно.
-- **Проверка свободного места**: Перед архивированием скрипт проверяет, достаточно ли места на диске.
+## How It Works
+- **Batch archiving**: Files are grouped by month and archived in a single command.
+- **Parallel processing**: If there are many files, data for different months can be archived simultaneously.
+- **Free space check**: The script checks for sufficient disk space before archiving.
 
+## License
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
 
----
+## Author
+- **Stanislav Rakitov**  
+
+## Contributing
+If you have ideas for improvement, feel free to create an Issue or submit a Pull Request. All contributions are welcome!
+
+## Links
+- [Issues](https://github.com/SkyrocketStan/cdr-archiver/issues)  
+- [Releases](https://github.com/SkyrocketStan/cdr-archiver/releases)  
+- [Wiki](https://github.com/SkyrocketStan/cdr-archiver/wiki)  

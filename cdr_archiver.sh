@@ -15,11 +15,12 @@ file_pattern="cdr_*_*.csv"
 usage() {
     echo "Usage:"
     echo "  $0 [--source-dir SOURCE_DIR] [--archive-dir ARCHIVE_DIR] [--pattern FILE_PATTERN]"
-    echo "  $0 SOURCE_DIR ARCHIVE_DIR [FILE_PATTERN]"
+    echo "  $0 SOURCE_DIR [ARCHIVE_DIR] [FILE_PATTERN]"
     echo ""
     echo "Examples:"
     echo "  $0 --source-dir /path/to/source --archive-dir /path/to/archives --pattern 'cdr_*_*.csv'"
     echo "  $0 /path/to/source /path/to/archives 'cdr_*_*.csv'"
+    echo "  $0 /path/to/source  # Archive directory will be created as /path/to/source_archives"
     exit 1
 }
 
@@ -51,12 +52,12 @@ if [[ "$1" == --* ]]; then
     done
 else
     # Positional arguments mode
-    if [[ $# -lt 2 ]]; then
-        echo "Error: Source directory and archive directory must be specified."
+    if [[ $# -lt 1 ]]; then
+        echo "Error: Source directory must be specified."
         usage
     fi
     source_dir="$1"
-    archive_dir="$2"
+    archive_dir="${2:-${source_dir}_archives}"  # Default archive directory if not provided
     file_pattern="${3:-cdr_*_*.csv}"  # Default pattern if not provided
 fi
 

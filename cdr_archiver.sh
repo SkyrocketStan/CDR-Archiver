@@ -1,14 +1,8 @@
 #!/bin/bash
 
-# CDR Archiver (Optimized)
+# CDR Archiver
 # Author: Stanislav Rakitov
 # Repository: https://github.com/SkyrocketStan/CDR-Archiver
-#
-# Improvements:
-# 1. Parallel processing with xargs
-# 2. Enhanced error handling
-# 3. Debug mode support
-# 4. Standard Linux utilities only
 
 # Default file pattern
 file_pattern="cdr_*_*.csv"
@@ -26,7 +20,7 @@ usage() {
     exit 1
 }
 
-# Enhanced logging function (FIXED)
+# Enhanced logging function
 log_message() {
     local level="$1"
     local message="$2"
@@ -35,8 +29,7 @@ log_message() {
     
     echo "$log_entry" | tee -a "$log_file"
     
-    # Corrected string comparison
-    if [[ "$level" == "ERROR" ]] && [[ "$debug_mode" -eq 1 ]]; then
+    if [[ "$level" == "ERROR" && "$debug_mode" -eq 1 ]]; then
         echo "DEBUG - Stack trace:" | tee -a "$log_file"
         caller | tee -a "$log_file"
     fi
@@ -80,7 +73,7 @@ done
 if [[ ${#positional_args[@]} -gt 0 ]]; then
     source_dir="${positional_args[0]}"
     archive_dir="${positional_args[1]:-${source_dir}_archives}"
-    file_pattern="${positional_args[2]:-cdr_*_*.csv}"
+    file_pattern="${positional_args[2]:-$file_pattern}"
     [[ " ${positional_args[@]} " =~ " --debug " ]] && debug_mode=1
 fi
 

@@ -63,7 +63,11 @@ find "$SOURCE_DIR" -type f -name "*.cdr" | while read -r file; do
 done
 
 # Логирование завершения выполнения
-log "Архивирование CDR-файлов завершено. Успешно обработано: ${SUCCESS_COUNT}/${TOTAL_FILES} файлов."
+log "Архивирование CDR-файлов завершено. Обработано: ${SUCCESS_COUNT}/${TOTAL_FILES} файлов."
 
-# Вывод сообщения об успешном выполнении
-echo "Скрипт успешно выполнен. Успешно обработано: ${SUCCESS_COUNT}/${TOTAL_FILES} файлов. Подробности в логе: $LOG_FILE"
+# Вывод результата
+if [[ $SUCCESS_COUNT -eq $TOTAL_FILES ]]; then
+    echo "Обработано: ${SUCCESS_COUNT}/${TOTAL_FILES} файлов. Подробности в логе: $LOG_FILE"
+else
+    echo "Обработано: ${SUCCESS_COUNT}/${TOTAL_FILES} файлов. Обнаружены ошибки. Подробности в логе: $LOG_FILE"
+fi

@@ -1,0 +1,46 @@
+# macOS
+._*
+.DS_Store
+.LSOverride
+# Icon must end with two carriage returns (\r)
+Icon
+
+# Windows
+[Dd]esktop.ini
+ehthumbs.db
+ehthumbs_vista.db
+[Tt]humbs.db
+
+# Backups
+*.bak
+
+# Logs
+*.log
+log/
+logs/
+
+# Outs
+*.txt
+*.csv
+*.out
+*.dat
+
+# Temporary
+*~
+*.tmp
+*.temp
+tmp/
+temp/
+*.bak
+*.swp
+*.swo
+*.~*
+
+# Vim
+.netrwhist
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]*.un~
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]

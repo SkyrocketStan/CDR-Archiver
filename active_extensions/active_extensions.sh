@@ -1,20 +1,29 @@
 #!/bin/bash
 
-# Автор: Stanislav Rakitov
-# Репозиторий: https://github.com/SkyrocketStan/CDR-Tools
+# Active Extensions Extractor
+# GitHub: https://github.com/SkyrocketStan/CDR-Tools
+# Copyright (C) 2025 Stanislav Rakitov
+# Licensed under the MIT License
 
 # Параметры по умолчанию
-CDR_DIR="$(pwd)"  # Директория с CDR-файлами
-DAYS=30           # Глубина анализа в днях
-DEBUG=false       # Режим отладки (по умолчанию выключен)
+CDR_DIR="$(pwd)"          # Директория с CDR-файлами
+DAYS=30                   # Глубина анализа в днях
+DEBUG=false               # Режим отладки (по умолчанию выключен)
 
 # Настраиваемые параметры поиска
 SEARCH_PATTERN="^[1-9][0-9]{5}$"  # Регулярное выражение для поиска (по умолчанию: шестизначные номера, не начинающиеся с 0)
 MIN_LENGTH=6                      # Минимальная длина номера
 MAX_LENGTH=6                      # Максимальная длина номера
-SEARCH_MODE="full"                # Режим поиска: "full" (по всей строке) или "position" (по позициям)
-CALLING_POS=13                    # Начальная позиция для calling-num (по умолчанию 13, длина 10)
-DIALED_POS=62                     # Начальная позиция для dialed-num (по умолчанию 62, длина 18)
+SEARCH_MODE="full"                # Режим поиска: "full" или "position"
+CALLING_POS=13                    # Начальная позиция для calling-num
+CALLING_LEN=10                    # Длина поля calling-num
+DIALED_POS=62                     # Начальная позиция для dialed-num
+DIALED_LEN=18                     # Длина поля dialed-num
+
+# Настраиваемые параметры файлов
+LOG_PATTERN="cdr_%Y-%m-%d_*.log"  # Шаблон имени CDR-файлов
+OUTPUT_FILE_NAME=""               # Имя выходного файла (пусто = по имени скрипта)
+LOG_FILE_NAME=""                  # Имя лог-файла (пусто = по имени скрипта)
 
 # Функция вывода справки
 show_help() {
@@ -42,91 +51,85 @@ show_help() {
     exit 0
 }
 
+# Логирование
+log() {
+    echo "$(date +"%Y-%m-%d %H:%M:%S") - [$1] $2" | tee -a "$LOG_FILE" 2>/dev/null || {
+        echo "Ошибка: невозможно записать в лог-файл $LOG_FILE" >&2
+        exit 1
+    }
+}
+
 # Обработка аргументов
-if [[ $# -eq 0 ]]; then
-    # Без параметров: используем текущую папку и дефолтные дни
-    :
-elif [[ "$1" == "--help" ]]; then
-    show_help
-elif [[ $# -eq 1 && "$1" =~ ^[0-9]+$ ]]; then
-    # Один аргумент — число дней
-    DAYS="$1"
-elif [[ $# -eq 1 && -d "$1" ]]; then
-    # Один аргумент — путь
-    CDR_DIR="$1"
-elif [[ $# -eq 2 && -d "$1" && "$2" =~ ^[0-9]+$ ]]; then
-    # Два аргумента — путь и дни
-    CDR_DIR="$1"
-    DAYS="$2"
-else
-    # Обработка именованных параметров или ошибка
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --debug)
-                DEBUG=true
-                shift
-                ;;
-            --cdr-dir)
-                if [[ -d "$2" ]]; then
-                    CDR_DIR="$2"
-                    shift 2
-                else
-                    echo "Ошибка: директория '$2' не существует."
-                    exit 1
-                fi
-                ;;
-            --days)
-                if [[ "$2" =~ ^[0-9]+$ ]]; then
-                    DAYS="$2"
-                    shift 2
-                else
-                    echo "Ошибка: '$2' не является числом."
-                    exit 1
-                fi
-                ;;
-            --help)
-                show_help
-                ;;
-            *)
-                echo "Неизвестный параметр: $1"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --debug)
+            DEBUG=true
+            shift
+            ;;
+        --cdr-dir)
+            if [[ -d "$2" ]]; then
+                CDR_DIR="$2"
+                shift 2
+            else
+                echo "Ошибка: директория '$2' не существует."
+                exit 1
+            fi
+            ;;
+        --days)
+            if [[ "$2" =~ ^[0-9]+$ ]]; then
+                DAYS="$2"
+                shift 2
+            else
+                echo "Ошибка: '$2' не является числом."
+                exit 1
+            fi
+            ;;
+        --help)
+            show_help
+            ;;
+        *)
+            if [[ "$1" =~ ^[0-9]+$ ]]; then
+                DAYS="$1"
+            elif [[ -d "$1" ]]; then
+                CDR_DIR="$1"
+            else
+                echo "Неизвестный параметр или некорректный аргумент: $1"
                 echo
                 show_help
                 exit 1
-                ;;
-        esac
-    done
-fi
+            fi
+            shift
+            ;;
+    esac
+done
 
-# Определяем имена файлов на основе имени скрипта
+# Установка имён файлов на основе имени скрипта, если не переопределено
 SCRIPT_NAME="$(basename "$0" .sh)"
-LOG_FILE="./${SCRIPT_NAME}.log"
-OUTPUT_FILE="./${SCRIPT_NAME}.txt"
+[[ -z "$OUTPUT_FILE_NAME" ]] && OUTPUT_FILE="./${SCRIPT_NAME}.txt" || OUTPUT_FILE="$OUTPUT_FILE_NAME"
+[[ -z "$LOG_FILE_NAME" ]] && LOG_FILE="./${SCRIPT_NAME}.log" || LOG_FILE="$LOG_FILE_NAME"
 
-# Логирование
-log() {
-    echo "$(date +"%Y-%m-%d %H:%M:%S") - [$1] $2" | tee -a "$LOG_FILE"
-}
-
-# Проверяем директорию
-if [[ ! -d "$CDR_DIR" ]]; then
-    log "ERROR" "Директория $CDR_DIR не найдена."
-    exit 1
-fi
+# Проверки перед началом
+[[ ! -d "$CDR_DIR" ]] && { echo "Ошибка: директория '$CDR_DIR' не существует."; exit 1; }
+[[ $DAYS -lt 0 ]] && { echo "Ошибка: DAYS не может быть отрицательным."; exit 1; }
+[[ $DAYS -gt 1000 ]] && { echo "Предупреждение: DAYS ($DAYS) слишком большое, может занять много времени."; }
+[[ "$LOG_PATTERN" != *%Y-%m-%d* ]] && { echo "Предупреждение: LOG_PATTERN не содержит %Y-%m-%d, даты не будут заменены."; }
+[[ $CALLING_LEN -le 0 || $DIALED_LEN -le 0 ]] && { echo "Ошибка: CALLING_LEN и DIALED_LEN должны быть положительными."; exit 1; }
 
 # Очистка старых данных
-> "$LOG_FILE"
-> "$OUTPUT_FILE"
+> "$LOG_FILE" 2>/dev/null || { echo "Ошибка: нет доступа к $LOG_FILE"; exit 1; }
+> "$OUTPUT_FILE" 2>/dev/null || { echo "Ошибка: нет доступа к $OUTPUT_FILE"; exit 1; }
 
 # Флаг наличия файлов
 FILES_FOUND=false
 
 # Обход файлов
-for ((i=1; i<=DAYS; i++)); do
+for ((i=0; i<DAYS; i++)); do
     FILE_DATE=$(date --date="$i days ago" +%Y-%m-%d)
-    FILES=("$CDR_DIR"/cdr_${FILE_DATE}_*.log)
+    PATTERN=$(echo "$LOG_PATTERN" | sed "s/%Y-%m-%d/$FILE_DATE/g")
+    FILES=("$CDR_DIR"/$PATTERN)
     
     if [[ ! -e "${FILES[0]}" ]]; then
-        log "INFO" "Нет файлов за $FILE_DATE."
+        log "INFO" "Нет файлов за $FILE_DATE (шаблон: $PATTERN)."
         continue
     fi
     
@@ -138,96 +141,58 @@ for ((i=1; i<=DAYS; i++)); do
         
         log "INFO" "Обрабатываю $FILE..."
         
-        # Обработка файла: поиск номеров с настраиваемыми параметрами
+        # Обработка файла: поиск номеров
         awk -v debug="$DEBUG" -v log_file="$LOG_FILE" -v pattern="$SEARCH_PATTERN" \
             -v min_len="$MIN_LENGTH" -v max_len="$MAX_LENGTH" -v mode="$SEARCH_MODE" \
-            -v calling_pos="$CALLING_POS" -v dialed_pos="$DIALED_POS" \
-            '{
+            -v calling_pos="$CALLING_POS" -v calling_len="$CALLING_LEN" \
+            -v dialed_pos="$DIALED_POS" -v dialed_len="$DIALED_LEN" \
+            '
+            function process_num(num, context) {
+                gsub(/[^0-9]/, "", num)
+                if (length(num) >= min_len && length(num) <= max_len && num ~ pattern) {
+                    if (debug == "true") {
+                        print strftime("%Y-%m-%d %H:%M:%S") " - [DEBUG] Найден номер: " num " (" context ") в строке: " $0 >> log_file
+                    }
+                    print num
+                }
+            }
+            {
                 if (mode == "full") {
-                    # Поиск по всей строке
                     gsub(/[ \t]+/, " ", $0)
                     split($0, fields, " ")
                     for (i in fields) {
-                        num = fields[i]
-                        gsub(/[^0-9]/, "", num)
-                        if (length(num) >= min_len && length(num) <= max_len && num ~ pattern) {
-                            if (debug == "true") {
-                                print strftime("%Y-%m-%d %H:%M:%S") " - [DEBUG] Найден номер: " num " в строке: " $0 >> log_file
-                            }
-                            print num
-                        }
+                        process_num(fields[i], "full")
                     }
                 } else if (mode == "position") {
-                    # Поиск по заданным позициям
-                    calling_num = substr($0, calling_pos, 10)
-                    dialed_num = substr($0, dialed_pos, 18)
-                    gsub(/[^0-9]/, "", calling_num)
-                    gsub(/[^0-9]/, "", dialed_num)
-                    
-                    if (length(calling_num) >= min_len && length(calling_num) <= max_len && calling_num ~ pattern) {
+                    if (length($0) < calling_pos + calling_len || length($0) < dialed_pos + dialed_len) {
                         if (debug == "true") {
-                            print strftime("%Y-%m-%d %H:%M:%S") " - [DEBUG] Найден номер: " calling_num " (calling-num) в строке: " $0 >> log_file
+                            print strftime("%Y-%m-%d %H:%M:%S") " - [DEBUG] Строка слишком короткая: " $0 >> log_file
                         }
-                        print calling_num
+                    } else {
+                        process_num(substr($0, calling_pos, calling_len), "calling-num")
+                        process_num(substr($0, dialed_pos, dialed_len), "dialed-num")
                     }
-                    if (length(dialed_num) >= min_len && length(dialed_num) <= max_len && dialed_num ~ pattern) {
-                        if (debug == "true") {
-                            print strftime("%Y-%m-%d %H:%M:%S") " - [DEBUG] Найден номер: " dialed_num " (dialed-num) в строке: " $0 >> log_file
-                        }
-                        print dialed_num
-                    }
+                } else {
+                    print "Ошибка: неизвестный SEARCH_MODE: " mode > "/dev/stderr"
+                    exit 1
                 }
-            }' "$FILE" >> "$OUTPUT_FILE"
+            }' "$FILE" >> "$OUTPUT_FILE" 2>>"$LOG_FILE"
     done
 done
 
 # Выводим сообщение, если файлы не были найдены
-if [[ "$FILES_FOUND" = false ]]; then
-    log "INFO" "Не найдено ни одного файла за указанный период."
-fi
+[[ "$FILES_FOUND" = false ]] && log "INFO" "Не найдено ни одного файла за указанный период."
 
 # Убираем дубликаты, сортируем
-LC_ALL=C sort -u -o "$OUTPUT_FILE" "$OUTPUT_FILE"
+LC_ALL=C sort -u -o "$OUTPUT_FILE" "$OUTPUT_FILE" 2>>"$LOG_FILE" || {
+    log "ERROR" "Не удалось отсортировать $OUTPUT_FILE"
+    exit 1
+}
 
 # Итоговый отчёт
 if [[ -s "$OUTPUT_FILE" ]]; then
     log "INFO" "Готово! Найдено $(wc -l < "$OUTPUT_FILE") уникальных номеров."
 else
     log "INFO" "Номера не найдены. Удаляю пустой файл."
-    rm -f "$OUTPUT_FILE"
-fi#!/bin/bash
-
-# Параметры скрипта
-CDR_DIR="${1:-$(pwd)}"  # Папка с CDR-файлами (по умолчанию текущая директория)
-DAYS="${2:-30}"         # Количество дней для анализа (по умолчанию 30)
-
-# Файл лога
-LOG_FILE="./active_extensions.log"
-OUTPUT_FILE="./active_extensions.txt"
-
-# Формат логирования
-LOG_FORMAT="%Y-%m-%d %H:%M:%S"
-log() {
-    echo "$(date +"$LOG_FORMAT") - [$1] $2" | tee -a "$LOG_FILE"
-}
-
-# Проверяем доступность директории CDR_DIR
-if [[ ! -d "$CDR_DIR" ]]; then
-    log "ERROR" "Директория $CDR_DIR не существует или недоступна."
-    exit 1
+    rm -f "$OUTPUT_FILE" 2>/dev/null
 fi
-
-# Динамическое количество потоков
-CORES=$(( $(nproc) / 2 ))
-[[ $CORES -lt 1 ]] && CORES=1
-[[ $CORES -gt 4 ]] && CORES=4
-
-# Функция для обработки одного файла
-process_file() {
-    local FILE="$1"
-    log "INFO" "Обрабатываю $FILE..."
-    if [[ ! -s "$FILE" ]]; then
-        log "WARNING" "Файл $FILE пуст."
-        return
-    fi
-    if [[ ! -r "$FILE" ]]; then

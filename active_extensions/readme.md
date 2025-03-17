@@ -1,4 +1,4 @@
-# Active Extensions CDR Parser
+# Active Extensions Extractor
 
 Скрипт предназначен для поиска активных номеров в CDR-файлах Avaya CM. 
 
